@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 class Vec3
 {
 public:
@@ -37,6 +38,17 @@ public:
 		return Vec3(y * other.z - z * other.y,
 			z * other.x - x * other.z,
 			x * other.y - y * other.x);
+	}
+
+	float dot(const Vec3& other)
+	{
+		return x* other.x + y * other.y + z * other.z;
+	}
+
+	Vec3 normalized() const
+	{
+		float length = std::sqrt(x * x + y * y + z * z);
+		return Vec3(x / length, y / length, z / length);
 	}
 
 	Vec3 operator * (float v) const	

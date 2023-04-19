@@ -8,9 +8,10 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "ObjModel.h"
+#include "Matrix4.h"
 
-const int width = 512;
-const int height = 512;
+const int width = 1024;
+const int height = 1024;
 
 
 void setPixel(char* imageData, int x, int y, const Vec3 &color)
@@ -76,33 +77,46 @@ int main()
 
 	char* imageData = new char[width * height * 3];
 	float* zBuffer = new float[width * height];
-	memset(imageData, 0, width * height * 3);
-	for (int i = 0; i < width * height; i++)
-		zBuffer[i] = -9999999;
 
-	setPixel(imageData, 10, 10, Vec3(1,0,0));
 
 	Vec3 corners[3] = { Vec3(10,10,0), Vec3(200,500,0), Vec3(500,20,0) };
 	Vec3 colors[3] = { Vec3(1,0,0), Vec3(0,1,0), Vec3(0,0,1) };
 
-
-	for (const auto& face : model.faces)
+	for (int frame = 0; frame < 100; frame++)
 	{
-		corners[0] = model.positions[face.position[0]];
-		corners[1] = model.positions[face.position[1]];
-		corners[2] = model.positions[face.position[2]];
+		//clear screen
+		memset(imageData, 0, width * height * 3);
+		for (int i = 0; i < width * height; i++)
+			zBuffer[i] = -9999999;
 
-		corners[0] = corners[0] * Vec3(width / 2, height / 2,1) + Vec3(width / 2, height / 2,0);
-		corners[1] = corners[1] * Vec3(width / 2, height / 2,1) + Vec3(width / 2, height / 2,0);
-		corners[2] = corners[2] * Vec3(width / 2, height / 2,1) + Vec3(width / 2, height / 2,0);
 
-		drawTriangle(zBuffer, imageData, corners, colors);
+		//	Matrix4 mat = Matrix4::translate(Vec3(1.0f, 0, 0));
+		Matrix4 mat = Matrix4::rotate(3.1315 * 2 * (frame/100.0f), Vec3(0, 1.0f, 0));
+		//mat = mat * Matrix4::translate(Vec3(1, 0, 0));
+		for (const auto& face : model.faces)
+		{
+			corners[0] = mat * model.positions[face.position[0]];
+			corners[1] = mat * model.positions[face.position[1]];
+			corners[2] = mat * model.positions[face.position[2]];
 
+			corners[0] = corners[0] * Vec3(width / 2, height / 2, 1) + Vec3(width / 2, height / 2, 0);
+			corners[1] = corners[1] * Vec3(width / 2, height / 2, 1) + Vec3(width / 2, height / 2, 0);
+			corners[2] = corners[2] * Vec3(width / 2, height / 2, 1) + Vec3(width / 2, height / 2, 0);
+
+			Vec3 lightDirection(1, 1, 1);
+			lightDirection = lightDirection.normalized();
+
+			colors[0] = Vec3(1, 1, 1) * max(0, 0.5f + 0.5f * model.normals[face.normal[0]].dot(lightDirection));
+			colors[1] = Vec3(1, 1, 1) * max(0, 0.5f + 0.5f * model.normals[face.normal[1]].dot(lightDirection));
+			colors[2] = Vec3(1, 1, 1) * max(0, 0.5f + 0.5f * model.normals[face.normal[2]].dot(lightDirection));
+
+			drawTriangle(zBuffer, imageData, corners, colors);
+
+		}
+
+		stbi_flip_vertically_on_write(true);
+		stbi_write_png(("out"+std::to_string(frame)+".png").c_str(), width, height, 3, imageData, 0);
 	}
-
-	stbi_flip_vertically_on_write(true);
-	stbi_write_png("out.png", width, height, 3, imageData, 0);
-
 
 #ifdef _WIN32
 	ShellExecute(0, 0, L"out.png", 0, 0, SW_SHOW);
